@@ -1,0 +1,234 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard{% endblock %}
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+{% block content %}
+<div class="container" style="padding-top:2rem; padding-bottom:3rem;">
+
+  <div class="page-header">
+    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem;">
+      <div>
+        <h1 class="page-title">COMMAND DASHBOARD</h1>
+        <p class="page-subtitle">Crime analytics and authority coordination overview</p>
+      </div>
+      <div style="display:flex; gap:0.75rem;">
+        <a href="{% url 'dashboard:ai_insights' %}" class="btn btn-secondary">
+          <span style="color:var(--purple);">✦</span> AI Insights
+        </a>
+        {% if user.is_staff or user.profile.is_authority %}
+        <a href="{% url 'emergency:alerts' %}" class="btn btn-primary">
+          SOS Alerts {% if stats.active_sos %}<span style="background:rgba(255,255,255,0.25); padding:1px 8px; border-radius:20px; font-size:0.75rem; margin-left:4px;">{{ stats.active_sos }}</span>{% endif %}
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Stat Cards -->
+  <div class="stats-grid">
+    <div class="stat-card" style="--accent-color: var(--red);">
+      <div class="stat-icon">📋</div>
+      <div class="stat-value">{{ stats.total_reports }}</div>
+      <div class="stat-label">Total Reports</div>
+    </div>
+    <div class="stat-card" style="--accent-color: var(--amber);">
+      <div class="stat-icon">⏳</div>
+      <div class="stat-value">{{ stats.pending }}</div>
+      <div class="stat-label">Pending Review</div>
+    </div>
+    <div class="stat-card" style="--accent-color: var(--blue);">
+      <div class="stat-icon">🔍</div>
+      <div class="stat-value">{{ stats.investigating }}</div>
+      <div class="stat-label">Investigating</div>
+    </div>
+    <div class="stat-card" style="--accent-color: var(--green);">
+      <div class="stat-icon">✓</div>
+      <div class="stat-value">{{ stats.resolved }}</div>
+      <div class="stat-label">Resolved</div>
+    </div>
+    <div class="stat-card" style="--accent-color: var(--red);">
+      <div class="stat-icon">🆘</div>
+      <div class="stat-value">{{ stats.active_sos }}</div>
+      <div class="stat-label">Active SOS</div>
+    </div>
+    <div class="stat-card" style="--accent-color: var(--cyan);">
+      <div class="stat-icon">📅</div>
+      <div class="stat-value">{{ stats.reports_this_week }}</div>
+      <div class="stat-label">This Week</div>
+    </div>
+  </div>
+
+  <!-- Charts row -->
+  <div class="dashboard-grid" style="margin-bottom:1.5rem;">
+    <div class="card">
+      <div class="card-header"><span class="card-title">Reports Over Time (14 Days)</span></div>
+      <div class="chart-wrapper">
+        <canvas id="timeChart"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">By Severity</span></div>
+      <div class="chart-wrapper">
+        <canvas id="severityChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="dashboard-grid">
+    <!-- Category chart -->
+    <div class="card">
+      <div class="card-header"><span class="card-title">By Category</span></div>
+      <div class="chart-wrapper">
+        <canvas id="categoryChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Top areas -->
+    <div class="card">
+      <div class="card-header"><span class="card-title">Top Crime Areas</span></div>
+      {% if top_areas %}
+      {% for area in top_areas %}
+      <div style="margin-bottom:0.75rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <span style="font-size:0.875rem; color:var(--text-secondary);">{{ area.area }}</span>
+          <span style="font-family:var(--font-mono); font-size:0.8rem; color:var(--text-primary);">{{ area.count }}</span>
+        </div>
+        <div style="height:4px; background:var(--bg-elevated); border-radius:2px; overflow:hidden;">
+          <div style="height:100%; background:var(--red); border-radius:2px; width:{% widthratio area.count top_areas.0.count 100 %}%;"></div>
+        </div>
+      </div>
+      {% endfor %}
+      {% else %}
+      <p style="color:var(--text-muted); font-size:0.875rem;">No area data yet.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Recent activity + Active SOS -->
+  <div class="dashboard-grid" style="margin-top:1.5rem;">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Recent Incidents</span>
+        <a href="{% url 'reports:list' %}" class="btn btn-ghost btn-sm">View All</a>
+      </div>
+      {% for report in recent_reports %}
+      <a href="{% url 'reports:detail' report.pk %}" class="report-item" style="margin-bottom:0.5rem;">
+        <div class="report-category-dot" style="background:{{ report.get_severity_color }};"></div>
+        <div style="flex:1; min-width:0;">
+          <div class="report-title" style="font-size:0.9rem;">{{ report.title|truncatechars:45 }}</div>
+          <div class="report-meta">{{ report.created_at|timesince }} ago</div>
+        </div>
+        <span class="badge badge-{{ report.status }}">{{ report.status }}</span>
+      </a>
+      {% empty %}
+      <p style="color:var(--text-muted); font-size:0.875rem;">No reports yet.</p>
+      {% endfor %}
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Active SOS Alerts</span>
+        <a href="{% url 'emergency:alerts' %}" class="btn btn-ghost btn-sm">Manage</a>
+      </div>
+      {% for alert in active_alerts %}
+      <a href="{% url 'emergency:alert_detail' alert.pk %}" style="display:flex; align-items:center; justify-content:space-between; padding:0.75rem 0; border-bottom:1px solid var(--border); text-decoration:none; color:inherit; transition:all 0.2s;">
+        <div>
+          <div style="font-weight:600; font-size:0.875rem; color:var(--text-primary);">{{ alert.get_emergency_type_display }}</div>
+          <div style="font-size:0.75rem; color:var(--text-muted);">{{ alert.user.get_full_name|default:alert.user.username }} · {{ alert.created_at|timesince }} ago</div>
+        </div>
+        <span class="badge badge-active">ACTIVE</span>
+      </a>
+      {% empty %}
+      <div style="text-align:center; padding:2rem; color:var(--text-muted);">
+        <div style="font-size:2rem; margin-bottom:0.5rem; opacity:0.3;">✓</div>
+        <div style="font-size:0.875rem;">No active SOS alerts</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+{% block extra_scripts %}
+<script>
+const byDay = {{ by_day_json|safe }};
+const byCategory = {{ by_category_json|safe }};
+const bySeverity = {{ by_severity_json|safe }};
+
+Chart.defaults.color = '#8892a4';
+Chart.defaults.borderColor = 'rgba(255,255,255,0.05)';
+Chart.defaults.font.family = "'Inter', sans-serif";
+
+// Time chart
+new Chart(document.getElementById('timeChart'), {
+  type: 'line',
+  data: {
+    labels: byDay.map(d => d.day),
+    datasets: [{
+      label: 'Incidents',
+      data: byDay.map(d => d.count),
+      borderColor: '#dc2828',
+      backgroundColor: 'rgba(220,40,40,0.08)',
+      fill: true,
+      tension: 0.4,
+      pointBackgroundColor: '#dc2828',
+      pointRadius: 4,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { precision: 0 } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// Severity chart
+const sevColors = { low: '#22c55e', medium: '#f59e0b', high: '#dc2828', critical: '#8b5cf6' };
+new Chart(document.getElementById('severityChart'), {
+  type: 'doughnut',
+  data: {
+    labels: bySeverity.map(d => d.severity.charAt(0).toUpperCase() + d.severity.slice(1)),
+    datasets: [{
+      data: bySeverity.map(d => d.count),
+      backgroundColor: bySeverity.map(d => sevColors[d.severity] || '#3b82f6'),
+      borderColor: '#111620',
+      borderWidth: 3,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'right' } },
+    cutout: '65%'
+  }
+});
+
+// Category chart
+const catColors = ['#dc2828','#f59e0b','#3b82f6','#22c55e','#8b5cf6','#06b6d4','#f97316','#ec4899','#84cc16'];
+new Chart(document.getElementById('categoryChart'), {
+  type: 'bar',
+  data: {
+    labels: byCategory.map(d => d.category.charAt(0).toUpperCase() + d.category.slice(1)),
+    datasets: [{
+      label: 'Reports',
+      data: byCategory.map(d => d.count),
+      backgroundColor: byCategory.map((_, i) => catColors[i % catColors.length] + '99'),
+      borderColor: byCategory.map((_, i) => catColors[i % catColors.length]),
+      borderWidth: 1,
+      borderRadius: 4,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { precision: 0 } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+</script>
+{% endblock %}

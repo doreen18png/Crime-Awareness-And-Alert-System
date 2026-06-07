@@ -1,0 +1,175 @@
+{% extends 'base.html' %}
+{% block title %}SOS Emergency{% endblock %}
+{% block content %}
+<div class="container" style="padding-top:2rem; padding-bottom:3rem;">
+
+  <!-- SOS Hero -->
+  <div class="sos-hero">
+    <p style="font-family:var(--font-mono); font-size:0.75rem; letter-spacing:4px; color:var(--red); margin-bottom:1rem;">⚡ EMERGENCY SERVICES</p>
+    <h1 style="font-family:var(--font-display); font-size:2.5rem; letter-spacing:4px; margin-bottom:0.5rem;">SOS ALERT</h1>
+    <p style="color:var(--text-muted); max-width:400px; margin:0 auto 1rem;">Press and hold the button below to send an emergency alert with your GPS location to authorities.</p>
+
+    <!-- Emergency Type -->
+    <div style="margin-bottom:1.5rem;">
+      <select id="emergency-type" class="filter-select" style="min-width:220px;">
+        <option value="general">🚨 General Emergency</option>
+        <option value="assault">🥊 Assault / Attack</option>
+        <option value="medical">🏥 Medical Emergency</option>
+        <option value="fire">🔥 Fire</option>
+        <option value="accident">💥 Accident</option>
+        <option value="robbery">🔫 Robbery in Progress</option>
+        <option value="kidnap">🚗 Kidnapping</option>
+      </select>
+    </div>
+
+    <!-- SOS Button -->
+    <button class="sos-button" id="sos-btn" onclick="triggerSOS()">
+      <div class="sos-btn-text">SOS</div>
+      <div class="sos-btn-sub">TAP TO ALERT</div>
+    </button>
+
+    <p id="sos-status" style="color:var(--text-muted); font-size:0.85rem; min-height:24px;"></p>
+
+    <!-- Message -->
+    <div style="max-width:420px; margin:1.5rem auto 0;">
+      <textarea id="sos-message" class="form-control" rows="2" placeholder="Optional: describe your situation..."></textarea>
+    </div>
+  </div>
+
+  <!-- Safe Zones Map -->
+  <div class="card" style="margin-top:2rem;">
+    <div class="card-header">
+      <span class="card-title">Nearest Safe Zones</span>
+      <span style="font-size:0.75rem; color:var(--text-muted);">Police stations, hospitals & emergency services</span>
+    </div>
+    <div class="map-container" style="height:360px;">
+      <div id="safe-zones-map" style="height:100%;"></div>
+    </div>
+  </div>
+
+  <!-- My recent alerts -->
+  {% if my_alerts %}
+  <div class="card" style="margin-top:1.5rem;">
+    <div class="card-header">
+      <span class="card-title">My Recent Alerts</span>
+    </div>
+    {% for alert in my_alerts %}
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:0.75rem 0; border-bottom:1px solid var(--border);">
+      <div>
+        <div style="font-weight:600; font-size:0.9rem; color:var(--text-primary);">{{ alert.get_emergency_type_display }}</div>
+        <div style="font-size:0.75rem; color:var(--text-muted);">{{ alert.created_at|date:"M d, Y H:i" }} · {{ alert.address|default:"GPS only" }}</div>
+      </div>
+      <span class="badge badge-{{ alert.status }}">{{ alert.get_status_display }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Emergency contacts -->
+  <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:1rem; margin-top:1.5rem;">
+    <div class="card" style="text-align:center;">
+      <div style="font-size:2rem; margin-bottom:0.5rem;">🚓</div>
+      <div style="font-family:var(--font-display); letter-spacing:1px; margin-bottom:4px;">POLICE</div>
+      <div style="font-size:1.4rem; font-family:var(--font-mono); color:var(--red);">999</div>
+    </div>
+    <div class="card" style="text-align:center;">
+      <div style="font-size:2rem; margin-bottom:0.5rem;">🚑</div>
+      <div style="font-family:var(--font-display); letter-spacing:1px; margin-bottom:4px;">AMBULANCE</div>
+      <div style="font-size:1.4rem; font-family:var(--font-mono); color:var(--red);">999</div>
+    </div>
+    <div class="card" style="text-align:center;">
+      <div style="font-size:2rem; margin-bottom:0.5rem;">🚒</div>
+      <div style="font-family:var(--font-display); letter-spacing:1px; margin-bottom:4px;">FIRE</div>
+      <div style="font-size:1.4rem; font-family:var(--font-mono); color:var(--red);">999</div>
+    </div>
+    <div class="card" style="text-align:center;">
+      <div style="font-size:2rem; margin-bottom:0.5rem;">🏥</div>
+      <div style="font-family:var(--font-display); letter-spacing:1px; margin-bottom:4px;">EMERGENCY LINE</div>
+      <div style="font-size:1.4rem; font-family:var(--font-mono); color:var(--red);">112</div>
+    </div>
+  </div>
+</div>
+
+<script>
+let userLat = null, userLng = null;
+
+// Get location immediately
+if (navigator.geolocation) {
+  navigator.geolocation.getCurrentPosition(pos => {
+    userLat = pos.coords.latitude;
+    userLng = pos.coords.longitude;
+  });
+}
+
+const safeZones = {{ safe_zones_json|safe }};
+
+document.addEventListener('DOMContentLoaded', () => {
+  initSafeZoneMap('safe-zones-map', safeZones, userLat, userLng);
+});
+
+function triggerSOS() {
+  const btn = document.getElementById('sos-btn');
+  const status = document.getElementById('sos-status');
+
+  if (btn.classList.contains('triggered')) return;
+
+  btn.classList.add('triggered');
+  btn.querySelector('.sos-btn-sub').textContent = 'SENDING...';
+  status.textContent = 'Locating you...';
+  status.style.color = 'var(--amber)';
+
+  const payload = {
+    emergency_type: document.getElementById('emergency-type').value,
+    message: document.getElementById('sos-message').value,
+    latitude: userLat,
+    longitude: userLng,
+    address: ''
+  };
+
+  // Reverse geocode before sending
+  const doSend = (address) => {
+    payload.address = address;
+    fetch('/emergency/trigger/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken')
+      },
+      body: JSON.stringify(payload)
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        status.textContent = '✓ ' + data.message;
+        status.style.color = 'var(--green)';
+        btn.querySelector('.sos-btn-sub').textContent = 'ALERT SENT';
+      } else {
+        throw new Error(data.error || 'Failed');
+      }
+    })
+    .catch(err => {
+      status.textContent = '⚠ Error: ' + err.message;
+      status.style.color = 'var(--red)';
+      btn.classList.remove('triggered');
+      btn.querySelector('.sos-btn-sub').textContent = 'TAP TO ALERT';
+    });
+  };
+
+  if (userLat && userLng) {
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${userLat}&lon=${userLng}`)
+      .then(r => r.json())
+      .then(d => doSend(d.display_name ? d.display_name.split(',').slice(0,3).join(',') : ''))
+      .catch(() => doSend(''));
+  } else {
+    doSend('');
+  }
+}
+
+function getCookie(name) {
+  const val = `; ${document.cookie}`;
+  const parts = val.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop().split(';').shift();
+  return '';
+}
+</script>
+{% endblock %}

@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% block title %}Register{% endblock %}
+{% block content %}
+<div class="auth-wrapper">
+  <div class="auth-card" style="max-width:560px;">
+    <h1 class="auth-title">JOIN VIGILANT</h1>
+    <p class="auth-sub">Create your community safety account</p>
+    <form method="post">
+      {% csrf_token %}
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+        <div class="form-group">
+          <label class="form-label">First Name</label>
+          <input type="text" name="first_name" class="form-control" required />
+          {% for e in form.first_name.errors %}<div class="form-error">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="form-group">
+          <label class="form-label">Last Name</label>
+          <input type="text" name="last_name" class="form-control" required />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Username</label>
+        <input type="text" name="username" class="form-control" required />
+        {% for e in form.username.errors %}<div class="form-error">{{ e }}</div>{% endfor %}
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input type="email" name="email" class="form-control" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Phone Number</label>
+        <input type="text" name="phone" class="form-control" placeholder="+254 7xx xxx xxx" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Role</label>
+        <select name="role" class="form-control" id="role-select" onchange="toggleOfficerFields(this.value)">
+          <option value="citizen">Citizen</option>
+          <option value="officer">Police Officer</option>
+        </select>
+      </div>
+      <div id="officer-fields" style="display:none;">
+        <div class="form-group">
+          <label class="form-label">Badge Number</label>
+          <input type="text" name="badge_number" class="form-control" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Police Station / District</label>
+          <input type="text" name="station" class="form-control" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" name="password1" class="form-control" required />
+        {% for e in form.password1.errors %}<div class="form-error">{{ e }}</div>{% endfor %}
+      </div>
+      <div class="form-group">
+        <label class="form-label">Confirm Password</label>
+        <input type="password" name="password2" class="form-control" required />
+        {% for e in form.password2.errors %}<div class="form-error">{{ e }}</div>{% endfor %}
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; margin-top:0.5rem;">Create Account →</button>
+    </form>
+    <div class="auth-footer">Already have an account? <a href="{% url 'login' %}">Sign In</a></div>
+  </div>
+</div>
+<script>
+function toggleOfficerFields(val) {
+  document.getElementById('officer-fields').style.display = val === 'officer' ? 'block' : 'none';
+}
+</script>
+{% endblock %}

@@ -1,0 +1,189 @@
+{% extends 'base.html' %}
+{% block title %}{{ report.title }}{% endblock %}
+{% block content %}
+<div class="container" style="padding-top:2rem; padding-bottom:3rem;">
+
+  <!-- Breadcrumb -->
+  <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:1.5rem;">
+    <a href="{% url 'reports:list' %}" style="color:var(--text-muted); text-decoration:none;">Crime Map</a>
+    <span style="margin:0 8px;">›</span>
+    <span>{{ report.title|truncatechars:40 }}</span>
+  </div>
+
+  <div class="detail-grid">
+    <!-- Main content -->
+    <div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:1rem;">
+        <span class="badge badge-{{ report.severity }}">{{ report.severity }}</span>
+        <span class="badge badge-{{ report.status }}">{{ report.get_status_display }}</span>
+        <span class="badge" style="background:var(--bg-elevated); color:var(--text-secondary); border:1px solid var(--border);">{{ report.get_category_display }}</span>
+      </div>
+
+      <h1 style="font-family:var(--font-display); font-size:1.8rem; letter-spacing:1px; margin-bottom:0.75rem;">{{ report.title }}</h1>
+
+      <div style="display:flex; gap:1.5rem; flex-wrap:wrap; margin-bottom:1.5rem; color:var(--text-muted); font-size:0.8rem;">
+        <span>📍 {{ report.address|default:report.area|default:"Location not specified" }}</span>
+        <span>🕐 {{ report.created_at|date:"M d, Y H:i" }}</span>
+        {% if not report.anonymous and report.reporter %}
+        <span>👤 {{ report.reporter.get_full_name|default:report.reporter.username }}</span>
+        {% else %}
+        <span>👤 Anonymous</span>
+        {% endif %}
+      </div>
+
+      <div class="detail-body" style="margin-bottom:2rem;">
+        {{ report.description|linebreaks }}
+      </div>
+
+      {% if report.image %}
+      <div style="margin-bottom:2rem;">
+        <img src="{{ report.image.url }}" alt="Report image" style="max-width:100%; border-radius:var(--radius-lg); border:1px solid var(--border);" />
+      </div>
+      {% endif %}
+
+      <!-- Map for this report -->
+      {% if report.latitude and report.longitude %}
+      <div class="card" style="margin-bottom:2rem;">
+        <div class="card-header"><span class="card-title">Incident Location</span></div>
+        <div class="map-container" style="height:260px;">
+          <div id="detail-map" style="height:100%;"></div>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- AI Analysis -->
+      {% if report.ai_summary %}
+      <div class="card" style="margin-bottom:2rem; border-color:rgba(139,92,246,0.2);">
+        <div class="card-header">
+          <span class="card-title">AI Analysis</span>
+          <span class="ai-badge">✦ Gemini AI</span>
+        </div>
+        <p style="color:var(--text-secondary); margin-bottom:1rem;">{{ report.ai_summary }}</p>
+        {% if report.ai_risk_score %}
+        <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1rem;">
+          <span style="font-size:0.8rem; color:var(--text-muted);">Risk Score</span>
+          <div style="flex:1; height:6px; background:var(--bg-elevated); border-radius:3px; overflow:hidden;">
+            <div style="height:100%; width:{{ report.ai_risk_score }}%; background:linear-gradient(90deg, var(--green), var(--amber), var(--red)); border-radius:3px;"></div>
+          </div>
+          <span style="font-family:var(--font-mono); font-size:0.9rem; color:var(--text-primary);">{{ report.ai_risk_score }}/100</span>
+        </div>
+        {% endif %}
+        {% if report.ai_recommendations %}
+        <div style="font-size:0.85rem; color:var(--text-muted);">
+          <strong style="color:var(--text-secondary);">Recommendations:</strong>
+          <div style="margin-top:6px; white-space:pre-line;">{{ report.ai_recommendations }}</div>
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <!-- Comments -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Comments ({{ comments.count }})</span>
+        </div>
+        {% for comment in comments %}
+        <div class="comment {% if comment.is_official %}comment-official{% endif %}">
+          <div class="comment-avatar">{{ comment.author.username|first|upper }}</div>
+          <div class="comment-body">
+            <div class="comment-meta">
+              {{ comment.author.get_full_name|default:comment.author.username }}
+              {% if comment.is_official %}<span class="badge badge-high" style="margin-left:6px; font-size:0.65rem;">Official</span>{% endif %}
+              · {{ comment.created_at|timesince }} ago
+            </div>
+            <div class="comment-text">{{ comment.text }}</div>
+          </div>
+        </div>
+        {% empty %}
+        <p style="color:var(--text-muted); font-size:0.875rem;">No comments yet.</p>
+        {% endfor %}
+
+        {% if user.is_authenticated %}
+        <form method="post" style="margin-top:1.5rem;">
+          {% csrf_token %}
+          <div class="form-group">
+            <label class="form-label">Add Comment</label>
+            <textarea name="text" class="form-control" rows="3" placeholder="Share information or updates..."></textarea>
+          </div>
+          <button type="submit" class="btn btn-secondary btn-sm">Post Comment</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div>
+      <!-- Status card -->
+      <div class="card" style="margin-bottom:1rem;">
+        <div class="card-header"><span class="card-title">Case Details</span></div>
+        <dl style="display:grid; gap:0.75rem;">
+          <div>
+            <dt style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:2px;">Status</dt>
+            <dd><span class="badge badge-{{ report.status }}">{{ report.get_status_display }}</span></dd>
+          </div>
+          <div>
+            <dt style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:2px;">Severity</dt>
+            <dd><span class="badge badge-{{ report.severity }}">{{ report.get_severity_display }}</span></dd>
+          </div>
+          <div>
+            <dt style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:2px;">Category</dt>
+            <dd style="color:var(--text-secondary); font-size:0.875rem;">{{ report.get_category_display }}</dd>
+          </div>
+          {% if report.area %}
+          <div>
+            <dt style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:2px;">Area</dt>
+            <dd style="color:var(--text-secondary); font-size:0.875rem;">{{ report.area }}</dd>
+          </div>
+          {% endif %}
+          {% if report.assigned_officer %}
+          <div>
+            <dt style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:2px;">Assigned Officer</dt>
+            <dd style="color:var(--text-secondary); font-size:0.875rem;">{{ report.assigned_officer.get_full_name|default:report.assigned_officer.username }}</dd>
+          </div>
+          {% endif %}
+          {% if report.resolved_at %}
+          <div>
+            <dt style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:2px;">Resolved</dt>
+            <dd style="color:var(--green); font-size:0.875rem;">{{ report.resolved_at|date:"M d, Y" }}</dd>
+          </div>
+          {% endif %}
+        </dl>
+      </div>
+
+      <!-- Officer notes -->
+      {% if report.officer_notes %}
+      <div class="card" style="margin-bottom:1rem; border-color:rgba(59,130,246,0.2);">
+        <div class="card-header"><span class="card-title">Officer Notes</span></div>
+        <p style="font-size:0.875rem; color:var(--text-secondary);">{{ report.officer_notes }}</p>
+      </div>
+      {% endif %}
+
+      <!-- Actions -->
+      <div style="display:flex; flex-direction:column; gap:0.75rem;">
+        {% if user.is_authenticated %}
+        <a href="{% url 'emergency:sos' %}" class="btn btn-danger" style="justify-content:center;">⚡ Send SOS</a>
+        {% endif %}
+        <a href="{% url 'reports:list' %}" class="btn btn-ghost" style="justify-content:center;">← Back to Map</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+{% if report.latitude and report.longitude %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const map = initCrimeMap('detail-map', [{
+    id: {{ report.pk }},
+    title: "{{ report.title|escapejs }}",
+    category: "{{ report.category }}",
+    severity: "{{ report.severity }}",
+    status: "{{ report.status }}",
+    address: "{{ report.address|escapejs }}",
+    latitude: {{ report.latitude }},
+    longitude: {{ report.longitude }},
+  }], { center: [{{ report.latitude }}, {{ report.longitude }}], zoom: 15 });
+});
+</script>
+{% endif %}
+{% endblock %}

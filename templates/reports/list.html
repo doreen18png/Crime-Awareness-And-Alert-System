@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+{% block title %}Crime Map{% endblock %}
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem;">
+      <div>
+        <h1 class="page-title">CRIME MAP</h1>
+        <p class="page-subtitle">Browse and filter incident reports in your area</p>
+      </div>
+      {% if user.is_authenticated %}
+      <a href="{% url 'reports:submit' %}" class="btn btn-primary">+ Report Incident</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Map -->
+  <div class="map-container" style="height:420px; margin-bottom:2rem;">
+    <div id="crime-map" style="height:100%;"></div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filter-bar">
+    <form method="get" style="display:flex; flex-wrap:wrap; gap:0.75rem; align-items:center; width:100%;">
+      <select name="category" class="filter-select" onchange="this.form.submit()">
+        <option value="">All Categories</option>
+        {% for val, label in categories %}
+        <option value="{{ val }}" {% if val == selected_category %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <select name="severity" class="filter-select" onchange="this.form.submit()">
+        <option value="">All Severities</option>
+        {% for val, label in severities %}
+        <option value="{{ val }}" {% if val == selected_severity %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <select name="status" class="filter-select" onchange="this.form.submit()">
+        <option value="">All Statuses</option>
+        {% for val, label in statuses %}
+        <option value="{{ val }}" {% if val == selected_status %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      {% if selected_category or selected_severity or selected_status %}
+      <a href="{% url 'reports:list' %}" class="btn btn-ghost btn-sm">Clear ×</a>
+      {% endif %}
+      <span style="color:var(--text-muted); font-size:0.8rem; margin-left:auto;">{{ reports.count }} incident{{ reports.count|pluralize }}</span>
+    </form>
+  </div>
+
+  <!-- Reports list -->
+  {% if reports %}
+  {% for report in reports %}
+  <a href="{% url 'reports:detail' report.pk %}" class="report-item">
+    <div class="report-category-dot" style="background:{{ report.get_severity_color }};"></div>
+    <div style="flex:1; min-width:0;">
+      <div class="report-title">{{ report.title }}</div>
+      <div class="report-meta">
+        {{ report.get_category_display }} ·
+        {{ report.area|default:report.address|default:"Unknown location"|truncatechars:50 }} ·
+        {{ report.created_at|timesince }} ago
+      </div>
+    </div>
+    <div style="display:flex; gap:6px; flex-shrink:0; flex-wrap:wrap;">
+      <span class="badge badge-{{ report.severity }}">{{ report.severity }}</span>
+      <span class="badge badge-{{ report.status }}">{{ report.status }}</span>
+    </div>
+  </a>
+  {% endfor %}
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">🔍</div>
+    <div class="empty-title">No incidents found</div>
+    <p style="margin-top:0.5rem; font-size:0.875rem;">Try adjusting your filters or <a href="{% url 'reports:submit' %}" style="color:var(--red);">submit a report</a>.</p>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Legend -->
+<div style="padding:1rem 0; border-top:1px solid var(--border); margin-top:2rem;">
+  <div class="container" style="display:flex; gap:1.5rem; flex-wrap:wrap; align-items:center;">
+    <span style="font-family:var(--font-display); font-size:0.7rem; letter-spacing:2px; color:var(--text-muted);">MAP LEGEND</span>
+    <span style="display:flex; align-items:center; gap:6px; font-size:0.8rem; color:var(--text-muted);"><span style="width:10px;height:10px;border-radius:50%;background:#22c55e;display:inline-block;"></span>Low</span>
+    <span style="display:flex; align-items:center; gap:6px; font-size:0.8rem; color:var(--text-muted);"><span style="width:10px;height:10px;border-radius:50%;background:#f59e0b;display:inline-block;"></span>Medium</span>
+    <span style="display:flex; align-items:center; gap:6px; font-size:0.8rem; color:var(--text-muted);"><span style="width:10px;height:10px;border-radius:50%;background:#dc2828;display:inline-block;"></span>High</span>
+    <span style="display:flex; align-items:center; gap:6px; font-size:0.8rem; color:var(--text-muted);"><span style="width:10px;height:10px;border-radius:50%;background:#8b5cf6;display:inline-block;"></span>Critical</span>
+  </div>
+</div>
+
+{% endblock %}
+{% block extra_scripts %}
+<script>
+const reportsData = {{ map_reports_json|safe }};
+document.addEventListener('DOMContentLoaded', () => {
+  initCrimeMap('crime-map', reportsData);
+});
+</script>
+{% endblock %}

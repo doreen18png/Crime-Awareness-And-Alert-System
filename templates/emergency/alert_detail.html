@@ -1,0 +1,172 @@
+{% extends 'base.html' %}
+{% block title %}Alert #{{ alert.pk }}{% endblock %}
+{% block content %}
+<div class="container" style="padding-top:2rem; padding-bottom:3rem;">
+  <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:1.5rem;">
+    <a href="{% url 'emergency:alerts' %}" style="color:var(--text-muted); text-decoration:none;">SOS Alerts</a>
+    <span style="margin:0 8px;">›</span>
+    <span>Alert #{{ alert.pk }}</span>
+  </div>
+
+  <div style="display:grid; grid-template-columns:1fr 320px; gap:1.5rem; align-items:start;">
+    <div>
+      <!-- Alert header -->
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:1rem;">
+        <span class="badge badge-{{ alert.status }}">{{ alert.get_status_display }}</span>
+        <span class="badge" style="background:var(--bg-elevated); color:var(--text-secondary); border:1px solid var(--border);">{{ alert.get_emergency_type_display }}</span>
+      </div>
+      <h1 style="font-family:var(--font-display); font-size:1.6rem; letter-spacing:1px; margin-bottom:0.5rem;">
+        EMERGENCY: {{ alert.get_emergency_type_display|upper }}
+      </h1>
+      <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:2rem;">Alert #{{ alert.pk }} · Reported {{ alert.created_at|date:"M d, Y H:i" }}</p>
+
+      <!-- Caller info -->
+      <div class="card" style="margin-bottom:1.5rem;">
+        <div class="card-header"><span class="card-title">Caller Information</span></div>
+        <dl style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+          <div>
+            <dt style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Name</dt>
+            <dd style="color:var(--text-primary); font-weight:600; margin-top:2px;">{{ alert.user.get_full_name|default:alert.user.username }}</dd>
+          </div>
+          <div>
+            <dt style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Username</dt>
+            <dd style="color:var(--text-secondary); margin-top:2px;">@{{ alert.user.username }}</dd>
+          </div>
+          {% if alert.user.profile.phone %}
+          <div>
+            <dt style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Phone</dt>
+            <dd style="color:var(--text-primary); font-family:var(--font-mono); margin-top:2px;">{{ alert.user.profile.phone }}</dd>
+          </div>
+          {% endif %}
+          <div>
+            <dt style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Location</dt>
+            <dd style="color:var(--text-secondary); margin-top:2px; font-size:0.85rem;">{{ alert.address|default:"GPS only" }}</dd>
+          </div>
+          {% if alert.latitude and alert.longitude %}
+          <div style="grid-column:span 2;">
+            <dt style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">GPS Coordinates</dt>
+            <dd style="color:var(--cyan); font-family:var(--font-mono); font-size:0.85rem; margin-top:2px;">
+              {{ alert.latitude }}, {{ alert.longitude }}
+              <a href="https://maps.google.com/?q={{ alert.latitude }},{{ alert.longitude }}" target="_blank" style="color:var(--red); margin-left:8px; font-size:0.75rem;">Open in Maps ↗</a>
+            </dd>
+          </div>
+          {% endif %}
+        </dl>
+        {% if alert.message %}
+        <div style="margin-top:1rem; padding-top:1rem; border-top:1px solid var(--border);">
+          <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">Message from Caller</div>
+          <p style="color:var(--text-secondary); font-size:0.9rem; line-height:1.6;">{{ alert.message }}</p>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- AI Dispatch Note -->
+      {% if alert.ai_dispatch_note %}
+      <div class="card" style="margin-bottom:1.5rem; border-color:rgba(139,92,246,0.2);">
+        <div class="card-header">
+          <span class="card-title">AI Dispatch Note</span>
+          <span class="ai-badge">✦ Gemini AI</span>
+        </div>
+        <p style="color:var(--text-secondary); line-height:1.7; font-size:0.9rem;">{{ alert.ai_dispatch_note }}</p>
+      </div>
+      {% endif %}
+
+      <!-- Map -->
+      {% if alert.latitude and alert.longitude %}
+      <div class="card" style="margin-bottom:1.5rem;">
+        <div class="card-header"><span class="card-title">Incident Location</span></div>
+        <div class="map-container" style="height:280px;">
+          <div id="alert-map" style="height:100%;"></div>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Response form -->
+      {% if user.is_authenticated %}
+      <div class="card">
+        <div class="card-header"><span class="card-title">Update Response</span></div>
+        <form method="post">
+          {% csrf_token %}
+          <div class="form-group">
+            <label class="form-label">Update Status</label>
+            <select name="status" class="form-control">
+              <option value="active" {% if alert.status == 'active' %}selected{% endif %}>Active — Needs Response</option>
+              <option value="responding" {% if alert.status == 'responding' %}selected{% endif %}>Responding</option>
+              <option value="resolved" {% if alert.status == 'resolved' %}selected{% endif %}>Resolved</option>
+              <option value="false_alarm" {% if alert.status == 'false_alarm' %}selected{% endif %}>False Alarm</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Response Notes</label>
+            <textarea name="response_notes" class="form-control" rows="4" placeholder="Actions taken, units dispatched, outcome...">{{ alert.response_notes }}</textarea>
+          </div>
+          <button type="submit" class="btn btn-primary">Update Alert</button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Sidebar -->
+    <div>
+      <div class="card" style="margin-bottom:1rem;">
+        <div class="card-header"><span class="card-title">Alert Timeline</span></div>
+        <div style="display:flex; flex-direction:column; gap:0.75rem;">
+          <div style="display:flex; gap:10px; align-items:flex-start;">
+            <div style="width:8px; height:8px; border-radius:50%; background:var(--red); margin-top:5px; flex-shrink:0;"></div>
+            <div>
+              <div style="font-size:0.8rem; font-weight:600; color:var(--text-primary);">Alert Triggered</div>
+              <div style="font-size:0.75rem; color:var(--text-muted);">{{ alert.created_at|date:"M d, Y H:i" }}</div>
+            </div>
+          </div>
+          {% if alert.responded_at %}
+          <div style="display:flex; gap:10px; align-items:flex-start;">
+            <div style="width:8px; height:8px; border-radius:50%; background:var(--amber); margin-top:5px; flex-shrink:0;"></div>
+            <div>
+              <div style="font-size:0.8rem; font-weight:600; color:var(--text-primary);">Response Started</div>
+              <div style="font-size:0.75rem; color:var(--text-muted);">{{ alert.responded_at|date:"M d, Y H:i" }}</div>
+            </div>
+          </div>
+          {% endif %}
+          {% if alert.resolved_at %}
+          <div style="display:flex; gap:10px; align-items:flex-start;">
+            <div style="width:8px; height:8px; border-radius:50%; background:var(--green); margin-top:5px; flex-shrink:0;"></div>
+            <div>
+              <div style="font-size:0.8rem; font-weight:600; color:var(--text-primary);">Resolved</div>
+              <div style="font-size:0.75rem; color:var(--text-muted);">{{ alert.resolved_at|date:"M d, Y H:i" }}</div>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if alert.responding_officer %}
+      <div class="card" style="margin-bottom:1rem;">
+        <div class="card-header"><span class="card-title">Responding Officer</span></div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div class="user-avatar" style="width:40px; height:40px; font-size:1rem;">{{ alert.responding_officer.username|first|upper }}</div>
+          <div>
+            <div style="font-weight:600; color:var(--text-primary);">{{ alert.responding_officer.get_full_name|default:alert.responding_officer.username }}</div>
+            <div style="font-size:0.75rem; color:var(--text-muted);">@{{ alert.responding_officer.username }}</div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <a href="{% url 'emergency:alerts' %}" class="btn btn-ghost" style="width:100%; justify-content:center;">← All Alerts</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+{% if alert.latitude and alert.longitude %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const map = L.map('alert-map').setView([{{ alert.latitude }}, {{ alert.longitude }}], 15);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+  L.circleMarker([{{ alert.latitude }}, {{ alert.longitude }}], {
+    radius: 12, fillColor: '#dc2828', color: '#dc2828', weight: 2, fillOpacity: 0.7
+  }).addTo(map).bindPopup('<strong>Emergency Location</strong>').openPopup();
+});
+</script>
+{% endif %}
+{% endblock %}

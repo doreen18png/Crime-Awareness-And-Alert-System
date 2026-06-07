@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: vigilant
+    runtime: python
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn vigilant.wsgi:application"
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: ".onrender.com"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: vigilant-db
+          property: connectionString
+      - key: GEMINI_API_KEY
+        sync: false   # Set this manually in Render dashboard
+
+databases:
+  - name: vigilant-db
+    databaseName: vigilant
+    user: vigilant_user
+    plan: free

@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% block title %}AI Insights{% endblock %}
+{% block content %}
+<div class="container" style="padding-top:2rem; padding-bottom:3rem; max-width:900px;">
+  <div class="page-header">
+    <div style="display:flex; align-items:center; gap:1rem; flex-wrap:wrap;">
+      <div>
+        <h1 class="page-title">AI INSIGHTS</h1>
+        <p class="page-subtitle">Gemini-powered crime pattern analysis and resource recommendations</p>
+      </div>
+      <span class="ai-badge" style="margin-left:auto;">✦ Gemini AI</span>
+    </div>
+  </div>
+
+  <!-- Quick stats summary -->
+  <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:1rem; margin-bottom:2rem;">
+    <div class="card" style="text-align:center; padding:1rem;">
+      <div style="font-family:var(--font-display); font-size:1.8rem; font-weight:700; color:var(--text-primary);">{{ total }}</div>
+      <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Total Reports</div>
+    </div>
+    {% for cat in top_categories %}
+    <div class="card" style="text-align:center; padding:1rem;">
+      <div style="font-family:var(--font-display); font-size:1.8rem; font-weight:700; color:var(--text-primary);">{{ cat.count }}</div>
+      <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">{{ cat.category|title }}</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- AI query form -->
+  <div class="card" style="margin-bottom:2rem;">
+    <div class="card-header">
+      <span class="card-title">Ask Gemini AI</span>
+    </div>
+    <form method="post">
+      {% csrf_token %}
+      <div class="form-group">
+        <label class="form-label">Custom Analysis Query</label>
+        <textarea name="query" class="form-control" rows="3" placeholder="e.g. What time of day do most assaults occur? Which areas need more patrols?"></textarea>
+        <div class="form-hint">Leave blank for a comprehensive automatic analysis</div>
+      </div>
+      <div style="display:flex; gap:1rem;">
+        <button type="submit" class="btn btn-primary">
+          <span id="ai-spinner" style="display:none;" class="spinner"></span>
+          ✦ Generate Analysis
+        </button>
+        <a href="?auto=1" class="btn btn-secondary">Auto Analysis</a>
+        <a href="{% url 'dashboard:index' %}" class="btn btn-ghost">← Dashboard</a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Results -->
+  {% if error %}
+  <div class="alert alert-error" style="position:static; margin-bottom:1.5rem;">
+    <span>{{ error }}</span>
+  </div>
+  {% endif %}
+
+  {% if insights %}
+  <div class="card" style="border-color:rgba(139,92,246,0.2);">
+    <div class="card-header">
+      <span class="card-title">Analysis Results</span>
+      <span class="ai-badge">✦ Gemini AI</span>
+    </div>
+    <div class="ai-response">{{ insights }}</div>
+  </div>
+  {% elif not error %}
+  <div class="empty-state">
+    <div class="empty-icon" style="color:var(--purple); opacity:1; font-size:3rem;">✦</div>
+    <div class="empty-title">Ready for Analysis</div>
+    <p style="margin-top:0.5rem; font-size:0.875rem;">Click "Auto Analysis" to get an AI-powered overview of crime patterns, or type a specific question above.</p>
+  </div>
+  {% endif %}
+</div>
+<script>
+document.querySelector('form').addEventListener('submit', () => {
+  document.getElementById('ai-spinner').style.display = 'inline-block';
+});
+</script>
+{% endblock %}

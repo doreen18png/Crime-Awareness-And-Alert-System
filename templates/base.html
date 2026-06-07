@@ -1,0 +1,113 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Vigilant{% endblock %} — Community Safety Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="{% static 'css/vigilant.css' %}" />
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<!-- Top navigation bar -->
+<nav class="navbar">
+  <div class="navbar-brand">
+    <div class="brand-icon">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2L3 7v5c0 5.25 3.75 10.15 9 11.35C17.25 22.15 21 17.25 21 12V7l-9-5z" stroke="currentColor" stroke-width="2" fill="none"/>
+        <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <a href="{% url 'core:home' %}" class="brand-text">VIGILANT</a>
+  </div>
+
+  <div class="navbar-links">
+    <a href="{% url 'reports:list' %}" class="nav-link {% if request.resolver_match.app_name == 'reports' %}active{% endif %}">
+      <span class="nav-icon">◈</span> Crime Map
+    </a>
+    {% if user.is_authenticated %}
+    <a href="{% url 'emergency:sos' %}" class="nav-link sos-link {% if request.resolver_match.app_name == 'emergency' %}active{% endif %}">
+      <span class="sos-pulse"></span> SOS
+    </a>
+    <a href="{% url 'dashboard:index' %}" class="nav-link {% if request.resolver_match.app_name == 'dashboard' %}active{% endif %}">
+      <span class="nav-icon">⊞</span> Dashboard
+    </a>
+    <a href="{% url 'reports:submit' %}" class="nav-link nav-cta">
+      + Report
+    </a>
+    <div class="nav-user">
+      <a href="{% url 'core:profile' %}" class="user-avatar">
+        {{ user.username|first|upper }}
+      </a>
+      <a href="{% url 'logout' %}" class="nav-link logout-link">↪ Out</a>
+    </div>
+    {% else %}
+    <a href="{% url 'login' %}" class="nav-link">Sign In</a>
+    <a href="{% url 'core:register' %}" class="nav-link nav-cta">Join Now</a>
+    {% endif %}
+  </div>
+
+  <!-- Mobile hamburger -->
+  <button class="hamburger" id="hamburger" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<!-- Mobile menu -->
+<div class="mobile-menu" id="mobile-menu">
+  <a href="{% url 'reports:list' %}">Crime Map</a>
+  {% if user.is_authenticated %}
+  <a href="{% url 'emergency:sos' %}">🆘 SOS Emergency</a>
+  <a href="{% url 'dashboard:index' %}">Dashboard</a>
+  <a href="{% url 'reports:submit' %}">Report Incident</a>
+  <a href="{% url 'core:profile' %}">My Profile</a>
+  <a href="{% url 'logout' %}">Sign Out</a>
+  {% else %}
+  <a href="{% url 'login' %}">Sign In</a>
+  <a href="{% url 'core:register' %}">Register</a>
+  {% endif %}
+</div>
+
+<!-- Messages -->
+{% if messages %}
+<div class="messages-container">
+  {% for message in messages %}
+  <div class="alert alert-{{ message.tags }}">
+    <span>{{ message }}</span>
+    <button class="alert-close" onclick="this.parentElement.remove()">×</button>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<main class="main-content">
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <span class="brand-text">VIGILANT</span>
+      <p>Community safety powered by AI</p>
+    </div>
+    <div class="footer-links">
+      <a href="{% url 'reports:list' %}">Crime Map</a>
+      <a href="{% url 'emergency:sos' %}">Emergency SOS</a>
+      <a href="{% url 'reports:submit' %}">Report Crime</a>
+    </div>
+    <div class="footer-meta">
+      <p>© 2025 Vigilant · Built with Django</p>
+    </div>
+  </div>
+</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{% static 'js/vigilant.js' %}"></script>
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>

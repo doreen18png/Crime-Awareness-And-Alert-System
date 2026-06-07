@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% block title %}SOS Alerts{% endblock %}
+{% block content %}
+<div class="container" style="padding-top:2rem; padding-bottom:3rem;">
+  <div class="page-header">
+    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem;">
+      <div>
+        <h1 class="page-title">SOS ALERTS</h1>
+        <p class="page-subtitle">Authority coordination — incoming emergency alerts</p>
+      </div>
+      <div style="display:flex; gap:0.5rem;">
+        <a href="?status=active" class="btn {% if status_filter == 'active' %}btn-primary{% else %}btn-ghost{% endif %} btn-sm">Active</a>
+        <a href="?status=responding" class="btn {% if status_filter == 'responding' %}btn-primary{% else %}btn-ghost{% endif %} btn-sm">Responding</a>
+        <a href="?status=resolved" class="btn {% if status_filter == 'resolved' %}btn-primary{% else %}btn-ghost{% endif %} btn-sm">Resolved</a>
+        <a href="?status=all" class="btn {% if status_filter == 'all' %}btn-primary{% else %}btn-ghost{% endif %} btn-sm">All</a>
+      </div>
+    </div>
+  </div>
+
+  {% if alerts %}
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Alert</th>
+          <th>User</th>
+          <th>Type</th>
+          <th>Location</th>
+          <th>Status</th>
+          <th>Time</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for alert in alerts %}
+        <tr>
+          <td style="font-family:var(--font-mono); color:var(--text-muted); font-size:0.75rem;">#{{ alert.pk }}</td>
+          <td style="color:var(--text-primary); font-weight:600;">{{ alert.user.get_full_name|default:alert.user.username }}</td>
+          <td>
+            <span style="color:var(--text-secondary); font-size:0.85rem;">{{ alert.get_emergency_type_display }}</span>
+          </td>
+          <td style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:0.8rem;">
+            {{ alert.address|default:"GPS coordinates only"|truncatechars:40 }}
+          </td>
+          <td><span class="badge badge-{{ alert.status }}">{{ alert.get_status_display }}</span></td>
+          <td style="font-size:0.8rem; color:var(--text-muted);">{{ alert.created_at|timesince }} ago</td>
+          <td>
+            <a href="{% url 'emergency:alert_detail' alert.pk %}" class="btn btn-ghost btn-sm">Respond →</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">✓</div>
+    <div class="empty-title">No alerts in this category</div>
+    <p style="margin-top:0.5rem; font-size:0.875rem; color:var(--text-muted);">All clear — no active SOS alerts.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

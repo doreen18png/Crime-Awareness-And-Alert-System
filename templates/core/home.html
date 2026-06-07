@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% block title %}Home{% endblock %}
+{% block content %}
+
+<section class="hero">
+  <p class="hero-eyebrow">◈ Community Safety Platform</p>
+  <h1 class="hero-title">VIGI<span>LANT</span></h1>
+  <p class="hero-desc">
+    Location-based crime awareness, community reporting, emergency SOS, and AI-powered authority coordination — all in one platform.
+  </p>
+  <div class="hero-actions">
+    {% if user.is_authenticated %}
+    <a href="{% url 'reports:submit' %}" class="btn btn-primary btn-lg">Report Incident</a>
+    <a href="{% url 'emergency:sos' %}" class="btn btn-danger btn-lg">⚡ SOS Emergency</a>
+    <a href="{% url 'reports:list' %}" class="btn btn-ghost btn-lg">View Crime Map</a>
+    {% else %}
+    <a href="{% url 'core:register' %}" class="btn btn-primary btn-lg">Join Vigilant</a>
+    <a href="{% url 'reports:list' %}" class="btn btn-ghost btn-lg">View Crime Map</a>
+    {% endif %}
+  </div>
+
+  <div class="hero-stats">
+    <div>
+      <div class="hero-stat-value">{{ stats.total_reports }}</div>
+      <div class="hero-stat-label">Incidents Reported</div>
+    </div>
+    <div>
+      <div class="hero-stat-value">{{ stats.resolved }}</div>
+      <div class="hero-stat-label">Cases Resolved</div>
+    </div>
+    <div>
+      <div class="hero-stat-value">{{ stats.active_alerts }}</div>
+      <div class="hero-stat-label">Active Alerts</div>
+    </div>
+    <div>
+      <div class="hero-stat-value">{{ stats.communities }}</div>
+      <div class="hero-stat-label">Community Members</div>
+    </div>
+  </div>
+</section>
+
+<!-- Feature Cards -->
+<section style="padding: 4rem 0; background: var(--bg-secondary);">
+  <div class="container">
+    <div style="text-align:center; margin-bottom: 3rem;">
+      <h2 style="font-family:var(--font-display); font-size:1.8rem; letter-spacing:3px;">HOW IT WORKS</h2>
+      <p style="color:var(--text-muted); margin-top:8px;">Protecting communities through technology and collaboration</p>
+    </div>
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:1.5rem;">
+      <div class="card" style="--accent-color: var(--red);">
+        <div style="font-size:2rem; margin-bottom:1rem;">🗺️</div>
+        <h3 style="font-family:var(--font-display); letter-spacing:1px; margin-bottom:0.5rem;">Crime Map</h3>
+        <p style="color:var(--text-muted); font-size:0.875rem; line-height:1.6;">Real-time interactive map of crime reports in your area. Filter by category, severity, and status.</p>
+      </div>
+      <div class="card">
+        <div style="font-size:2rem; margin-bottom:1rem;">📢</div>
+        <h3 style="font-family:var(--font-display); letter-spacing:1px; margin-bottom:0.5rem;">Community Reporting</h3>
+        <p style="color:var(--text-muted); font-size:0.875rem; line-height:1.6;">Submit incident reports with location, images, and details. Anonymous reporting available.</p>
+      </div>
+      <div class="card">
+        <div style="font-size:2rem; margin-bottom:1rem;">🆘</div>
+        <h3 style="font-family:var(--font-display); letter-spacing:1px; margin-bottom:0.5rem;">Emergency SOS</h3>
+        <p style="color:var(--text-muted); font-size:0.875rem; line-height:1.6;">One-tap SOS alerts that instantly notify authorities with your GPS location and emergency type.</p>
+      </div>
+      <div class="card">
+        <div style="font-size:2rem; margin-bottom:1rem;">✦</div>
+        <h3 style="font-family:var(--font-display); letter-spacing:1px; margin-bottom:0.5rem;">Gemini AI Analysis</h3>
+        <p style="color:var(--text-muted); font-size:0.875rem; line-height:1.6;">AI-powered crime pattern analysis, risk scoring, dispatch notes, and resource allocation insights.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Recent reports -->
+{% if recent_reports %}
+<section style="padding: 4rem 0;">
+  <div class="container">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem;">
+      <h2 style="font-family:var(--font-display); font-size:1.4rem; letter-spacing:2px;">RECENT INCIDENTS</h2>
+      <a href="{% url 'reports:list' %}" class="btn btn-ghost btn-sm">View All →</a>
+    </div>
+    {% for report in recent_reports %}
+    <a href="{% url 'reports:detail' report.pk %}" class="report-item">
+      <div class="report-category-dot" style="background:{{ report.get_severity_color }};"></div>
+      <div style="flex:1">
+        <div class="report-title">{{ report.title }}</div>
+        <div class="report-meta">
+          {{ report.category }} · {{ report.area|default:report.address|truncatechars:40 }} · {{ report.created_at|timesince }} ago
+        </div>
+      </div>
+      <span class="badge badge-{{ report.severity }}">{{ report.severity }}</span>
+      <span class="badge badge-{{ report.status }}">{{ report.status }}</span>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% endblock %}

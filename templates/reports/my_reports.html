@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block title %}My Reports{% endblock %}
+{% block content %}
+<div class="container" style="padding-top:2rem; padding-bottom:3rem;">
+  <div class="page-header">
+    <div style="display:flex; align-items:center; justify-content:space-between;">
+      <div>
+        <h1 class="page-title">MY REPORTS</h1>
+        <p class="page-subtitle">All incidents you have reported</p>
+      </div>
+      <a href="{% url 'reports:submit' %}" class="btn btn-primary">+ New Report</a>
+    </div>
+  </div>
+  {% for report in reports %}
+  <a href="{% url 'reports:detail' report.pk %}" class="report-item">
+    <div class="report-category-dot" style="background:{{ report.get_severity_color }};"></div>
+    <div style="flex:1">
+      <div class="report-title">{{ report.title }}</div>
+      <div class="report-meta">{{ report.get_category_display }} · {{ report.created_at|date:"M d, Y H:i" }}</div>
+    </div>
+    <span class="badge badge-{{ report.severity }}">{{ report.severity }}</span>
+    <span class="badge badge-{{ report.status }}">{{ report.get_status_display }}</span>
+  </a>
+  {% empty %}
+  <div class="empty-state">
+    <div class="empty-icon">📋</div>
+    <div class="empty-title">No reports yet</div>
+    <p style="margin-top:0.5rem;"><a href="{% url 'reports:submit' %}" style="color:var(--red);">Submit your first report</a></p>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

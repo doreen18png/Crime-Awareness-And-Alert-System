@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block title %}Sign In{% endblock %}
+{% block content %}
+<div class="auth-wrapper">
+  <div class="auth-card">
+    <h1 class="auth-title">SIGN IN</h1>
+    <p class="auth-sub">Access the Vigilant platform</p>
+    <form method="post">
+      {% csrf_token %}
+      <div class="form-group">
+        <label class="form-label">Username</label>
+        <input type="text" name="username" class="form-control" placeholder="your_username" required autofocus />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" name="password" class="form-control" placeholder="••••••••" required />
+      </div>
+      {% if form.errors %}
+      <div style="color:var(--red); font-size:0.85rem; margin-bottom:1rem;">Invalid username or password.</div>
+      {% endif %}
+      <input type="hidden" name="next" value="{{ next }}" />
+      <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;">Sign In →</button>
+    </form>
+    <div class="auth-footer">
+      Don't have an account? <a href="{% url 'core:register' %}">Register now</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
