@@ -66,7 +66,10 @@
   <a href="{% url 'dashboard:index' %}">Dashboard</a>
   <a href="{% url 'reports:submit' %}">Report Incident</a>
   <a href="{% url 'core:profile' %}">My Profile</a>
-  <a href="{% url 'logout' %}">Sign Out</a>
+  <form method="POST" action="{% url 'logout' %}">
+    {% csrf_token %}
+    <button type="submit">Logout</button>
+</form>
   {% else %}
   <a href="{% url 'login' %}">Sign In</a>
   <a href="{% url 'core:register' %}">Register</a>
